@@ -1,0 +1,4 @@
+interface:
+  display_name: "SOFAStack Community Review"
+  short_description: "Run the SOFAStack issue/PR review automation with gated auto-send"
+  default_prompt: "Use $sofastack-community-review to scan the SOFAStack v1 target repositories for new issue/PR activity, route each thread through the appropriate SOFAStack review skill in pipeline mode, auto-send only eligible high-confidence comments, and produce one inbox summary with Auto-sent, Needs review, and Skipped/Error."

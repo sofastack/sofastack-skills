@@ -1,0 +1,51 @@
+{
+  "actor": "nobodyiam",
+  "stateFile": "~/.codex/tmp/sofastack-community-review/state.json",
+  "mirrorRoot": "~/.codex/tmp/sofastack-community-review/mirrors",
+  "repos": [
+    {
+      "repo": "sofastack/sofa-rpc",
+      "maintainers": ["nobodyiam", "EvenLjj", "leizhiyuan", "ujjboy", "OrezzerO", "Lo1nt", "JervyShi", "zonghaishang"]
+    },
+    {
+      "repo": "sofastack/sofa-jraft",
+      "maintainers": ["nobodyiam", "fengjiachun", "killme2008", "horizonzy", "shihuili1218", "zongtanghu"]
+    },
+    {
+      "repo": "sofastack/sofa-boot",
+      "maintainers": ["nobodyiam", "HzjNeverStop", "QilongZhang", "alaneuler", "CrazyHZM", "caojie09", "guanchao-yang", "glmapper", "leizhiyuan"]
+    },
+    {
+      "repo": "sofastack/sofa-bolt",
+      "maintainers": ["nobodyiam", "xmtsui", "dbl-x", "chuailiwu", "funky-eyes"]
+    },
+    {
+      "repo": "sofastack/sofa-registry",
+      "maintainers": ["nobodyiam", "dzdx", "nocvalight", "Synex-wh", "atellwu", "huanglongchao", "hui-cha"]
+    },
+    {
+      "repo": "sofastack/sofa-tracer",
+      "maintainers": ["nobodyiam", "guanchao-yang", "glmapper", "QilongZhang", "xzchaoo", "ZijieSong"]
+    },
+    {
+      "repo": "sofastack/sofa-ark",
+      "maintainers": ["nobodyiam", "lvjing2", "QilongZhang", "glmapper", "gaosaroma", "lylingzhen", "yuanyuancin", "straybirdzls"]
+    }
+  ],
+  "ignoredBots": [
+    "stale",
+    "stale[bot]",
+    "mergify",
+    "mergify[bot]",
+    "dependabot",
+    "dependabot[bot]",
+    "app/dependabot",
+    "copilot",
+    "app/copilot-swe-agent",
+    "copilot-pull-request-reviewer",
+    "coderabbitai",
+    "codecov",
+    "sofastack-cla",
+    "sofastack-bot"
+  ]
+}

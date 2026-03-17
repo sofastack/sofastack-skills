@@ -1,0 +1,4 @@
+interface:
+  display_name: "SOFAStack Issue Review"
+  short_description: "Review SOFAStack community issues and draft maintainer replies"
+  default_prompt: "Review this SOFAStack issue, classify it first, validate by reproduction or evidence scan, and draft a concise maintainer response with concrete triage steps."

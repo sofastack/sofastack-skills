@@ -1,0 +1,4 @@
+interface:
+  display_name: "SOFAStack PR Review"
+  short_description: "Review SOFAStack ecosystem PRs with maintainer-grade checks"
+  default_prompt: "Use $sofastack-pr-review to review this PR, reconcile prior feedback, verify linked-issue coverage (or infer scope when no issue is linked), check CI and compatibility risks, draft a concise maintainer reply, and ask me to confirm before sending."
