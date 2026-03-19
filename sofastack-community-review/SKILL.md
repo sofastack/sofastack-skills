@@ -27,27 +27,26 @@ Path notes:
 ## Defaults
 
 - repo: `sofastack/sofa-rpc`
-- actor: `nobodyiam`
-- maintainers: `nobodyiam`
-- mirror dir: `~/.codex/tmp/sofastack-review-mirror`
-- state file: `~/.codex/tmp/sofastack-community-review/state.json`
+- actor: resolve at runtime from `--actor`, `SOFASTACK_REVIEW_ACTOR`, `GITHUB_ACTOR`, or current `gh` login
+- maintainers: use the repo-specific maintainer set from `references/repo-policy.json` or pass an explicit CSV for per-repo runs
+- state file: resolve from `--state-file`, `SOFASTACK_COMMUNITY_REVIEW_STATE_FILE`, `SOFASTACK_COMMUNITY_REVIEW_HOME/state.json`, policy `stateFile` (org scan wrapper), or the XDG state default `~/.local/state/sofastack-community-review/state.json`
+- mirror root: resolve from `--mirror-dir`, `SOFASTACK_COMMUNITY_REVIEW_MIRROR_ROOT`, `SOFASTACK_COMMUNITY_REVIEW_HOME/mirrors`, or the XDG cache default `~/.cache/sofastack-community-review/mirrors`
 - default branch: `master`
 
-For organization-wide runs, prefer the wrapper below so the bot does not have to reconstruct repo/maintainer mappings every time:
+For organization-wide runs, prefer the wrapper below so the bot does not have to reconstruct repo/maintainer mappings every time. Pass `--actor` explicitly when you want a fixed operator identity; otherwise `scan_org.py` resolves the actor from environment variables or the current `gh` login.
 
 ```bash
 python3 "$SKILL_ROOT/scripts/scan_org.py" \
   --policy-file "$SKILL_ROOT/references/repo-policy.json" \
-  --state-file ~/.codex/tmp/sofastack-community-review/state.json \
   --initial-lookback-hours 4 \
   --pretty
 ```
 
-If you need to operate repository-by-repository, override `--repo`, `--maintainers`, and usually `--mirror-dir` per repository. Use one shared state file and repo-specific mirror dirs.
+If you need to operate repository-by-repository, override `--repo`, `--actor`, `--maintainers`, and usually `--mirror-dir` per repository. Keep `actor` and `maintainers` conceptually separate: the current operator is not automatically treated as a maintainer unless the repo policy explicitly lists that login. Use one shared state file and repo-specific mirror dirs. For mirror syncs, let the script resolve the default branch from CLI override, repo policy, or GitHub metadata unless you have a reason to pin it explicitly.
 
 Example mirror dir pattern for org scans:
 ```bash
-~/.codex/tmp/sofastack-community-review/mirrors/<repo_slug>
+<mirror_root>/<repo_slug>
 ```
 
 ## Workflow
@@ -57,7 +56,7 @@ Example mirror dir pattern for org scans:
 python3 "$SKILL_ROOT/scripts/community_review.py" \
   sync-mirror \
   --repo sofastack/sofa-rpc \
-  --mirror-dir ~/.codex/tmp/sofastack-review-mirror \
+  --mirror-dir <mirror_dir> \
   --default-branch master
 ```
 
@@ -66,9 +65,9 @@ python3 "$SKILL_ROOT/scripts/community_review.py" \
 python3 "$SKILL_ROOT/scripts/community_review.py" \
   scan \
   --repo sofastack/sofa-rpc \
-  --actor nobodyiam \
-  --maintainers nobodyiam \
-  --state-file ~/.codex/tmp/sofastack-community-review/state.json \
+  --actor <actor_login> \
+  --maintainers <repo_maintainer_csv> \
+  --state-file <state_file> \
   --initial-lookback-hours 4
 ```
 
@@ -79,7 +78,7 @@ python3 "$SKILL_ROOT/scripts/community_review.py" \
 python3 "$SKILL_ROOT/scripts/community_review.py" \
   checkout-pr-head \
   --repo sofastack/sofa-rpc \
-  --mirror-dir ~/.codex/tmp/sofastack-review-mirror \
+  --mirror-dir <mirror_dir> \
   --number <pr_number>
 ```
 - Run the appropriate review skill in `output_mode=pipeline`.
@@ -122,7 +121,7 @@ python3 "$SKILL_ROOT/scripts/community_review.py" \
 ```bash
 python3 "$SKILL_ROOT/scripts/community_review.py" \
   mark-processed \
-  --state-file ~/.codex/tmp/sofastack-community-review/state.json \
+  --state-file <state_file> \
   --candidate-file <candidate_json> \
   --decision-file <decision_json>
 ```

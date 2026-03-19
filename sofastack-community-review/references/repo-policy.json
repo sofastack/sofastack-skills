@@ -1,7 +1,6 @@
 {
-  "actor": "nobodyiam",
-  "stateFile": "~/.codex/tmp/sofastack-community-review/state.json",
-  "mirrorRoot": "~/.codex/tmp/sofastack-community-review/mirrors",
+  "stateFile": "~/.local/state/sofastack-community-review/state.json",
+  "mirrorRoot": "~/.cache/sofastack-community-review/mirrors",
   "repos": [
     {
       "repo": "sofastack/sofa-rpc",
@@ -29,6 +28,7 @@
     },
     {
       "repo": "sofastack/sofa-ark",
+      "defaultBranch": "master",
       "maintainers": ["nobodyiam", "lvjing2", "QilongZhang", "glmapper", "gaosaroma", "lylingzhen", "yuanyuancin", "straybirdzls"]
     }
   ],

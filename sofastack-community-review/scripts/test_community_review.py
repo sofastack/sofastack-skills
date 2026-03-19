@@ -308,6 +308,76 @@ handoff:
         )
         self.assertFalse(cr.has_new_external_activity(candidate, "2026-03-15T00:00:00Z"))
 
+    def test_fetch_commit_timestamp_handles_null_author_and_committer(self):
+        commits = [
+            {
+                "commit": {
+                    "author": {"date": "2026-03-16T00:00:00Z"},
+                    "committer": {"date": "2026-03-16T00:05:00Z"},
+                },
+                "author": None,
+                "committer": None,
+            }
+        ]
+        with patch.object(cr, "gh_api_json", return_value=commits):
+            timestamp, actor = cr.fetch_commit_timestamp("sofastack/sofa-ark", 1234)
+
+        self.assertEqual("2026-03-16T00:05:00Z", timestamp)
+        self.assertIsNone(actor)
+
+    def test_resolve_default_branch_prefers_cli_value(self):
+        with patch.object(cr, "load_policy_file", return_value={}), patch.object(cr, "fetch_repo_default_branch") as fetch:
+            branch = cr.resolve_default_branch("sofastack/sofa-rpc", "release-main")
+
+        self.assertEqual("release-main", branch)
+        fetch.assert_not_called()
+
+    def test_resolve_default_branch_uses_policy_before_github_lookup(self):
+        policy = {"repos": [{"repo": "sofastack/sofa-rpc", "defaultBranch": "master"}]}
+        with patch.object(cr, "load_policy_file", return_value=policy), patch.object(cr, "fetch_repo_default_branch") as fetch:
+            branch = cr.resolve_default_branch("sofastack/sofa-rpc", None)
+
+        self.assertEqual("master", branch)
+        fetch.assert_not_called()
+
+    def test_resolve_default_branch_falls_back_to_github_default(self):
+        with patch.object(cr, "load_policy_file", return_value={}), patch.object(
+            cr,
+            "fetch_repo_default_branch",
+            return_value="main",
+        ):
+            branch = cr.resolve_default_branch("sofastack/new-repo", None)
+
+        self.assertEqual("main", branch)
+
+    def test_fetch_repo_default_branch_reads_repo_metadata(self):
+        with patch.object(cr, "gh_api_json", return_value={"default_branch": "main"}):
+            branch = cr.fetch_repo_default_branch("sofastack/new-repo")
+
+        self.assertEqual("main", branch)
+
+    def test_command_sync_mirror_resolves_branch_before_sync(self):
+        args = argparse.Namespace(
+            repo="sofastack/sofa-rpc",
+            mirror_dir="~/mirror",
+            default_branch=None,
+            policy_file="/tmp/policy.json",
+        )
+        with patch.object(cr, "resolve_default_branch", return_value="master") as resolve_branch, patch.object(
+            cr,
+            "sync_mirror",
+            return_value={"repo": "sofastack/sofa-rpc", "default_branch": "master", "mirror_dir": "/tmp/mirror"},
+        ) as sync_mirror, patch("sys.stdout", new_callable=io.StringIO) as stdout:
+            cr.command_sync_mirror(args)
+
+        resolve_branch.assert_called_once_with(
+            "sofastack/sofa-rpc",
+            None,
+            policy_file=Path("/tmp/policy.json"),
+        )
+        sync_mirror.assert_called_once_with("sofastack/sofa-rpc", Path("~/mirror"), "master")
+        self.assertIn('"default_branch": "master"', stdout.getvalue())
+
     def test_main_returns_handler_exit_code(self):
         parser = Mock()
         parser.parse_args.return_value = argparse.Namespace(func=lambda args: 7)

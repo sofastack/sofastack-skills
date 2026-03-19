@@ -16,6 +16,8 @@ from urllib.parse import urlencode
 
 import yaml
 
+import runtime_paths
+
 
 CHINESE_DISCLAIMER = (
     "注：本回复由 AI 自动生成并自动发送，用于初步分诊；如需进一步确认，维护者会继续跟进。"
@@ -25,9 +27,12 @@ ENGLISH_DISCLAIMER = (
     "a maintainer will follow up if needed."
 )
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+SKILL_ROOT = SCRIPT_DIR.parent
+DEFAULT_POLICY_FILE = SKILL_ROOT / "references" / "repo-policy.json"
 DEFAULT_REPO = "sofastack/sofa-rpc"
-DEFAULT_STATE_FILE = Path.home() / ".codex" / "tmp" / "sofastack-community-review" / "state.json"
-DEFAULT_MIRROR_DIR = Path.home() / ".codex" / "tmp" / "sofastack-review-mirror"
+DEFAULT_STATE_FILE = runtime_paths.default_state_file()
+DEFAULT_MIRROR_DIR = runtime_paths.default_mirror_root()
 READY_CHECK_CONCLUSIONS = {"success", "neutral", "skipped"}
 KNOWN_AUTOMATION_LOGINS = {
     "stale",
@@ -244,11 +249,12 @@ def fetch_commit_timestamp(repo: str, pr_number: int) -> tuple[str | None, str |
     if not commits:
         return None, None
     latest = commits[-1]
+    commit_meta = latest.get("commit") or {}
     timestamp = (
-        latest.get("commit", {}).get("committer", {}).get("date")
-        or latest.get("commit", {}).get("author", {}).get("date")
+        (commit_meta.get("committer") or {}).get("date")
+        or (commit_meta.get("author") or {}).get("date")
     )
-    actor = latest.get("author", {}).get("login") or latest.get("committer", {}).get("login")
+    actor = ((latest.get("author") or {}).get("login") or (latest.get("committer") or {}).get("login"))
     return timestamp, actor
 
 
@@ -874,8 +880,46 @@ def parse_json_file(path: Path) -> Any:
     return json.loads(path.read_text())
 
 
+def load_policy_file(path: Path | None) -> dict[str, Any]:
+    if path is None:
+        return {}
+    expanded = runtime_paths.expand_path(path)
+    if not expanded.exists():
+        return {}
+    return parse_json_file(expanded)
+
+
+def find_repo_policy_entry(policy: dict[str, Any], repo: str) -> dict[str, Any] | None:
+    for entry in policy.get("repos", []):
+        if entry.get("repo") == repo:
+            return entry
+    return None
+
+
+def fetch_repo_default_branch(repo: str) -> str:
+    payload = gh_api_json(f"repos/{repo}")
+    branch = payload.get("default_branch")
+    if isinstance(branch, str) and branch.strip():
+        return branch.strip()
+    raise RuntimeError(f"unable to resolve default branch for {repo}")
+
+
+def resolve_default_branch(repo: str, default_branch: str | None, *, policy_file: Path | None = DEFAULT_POLICY_FILE) -> str:
+    if default_branch:
+        return default_branch
+
+    policy = load_policy_file(policy_file)
+    entry = find_repo_policy_entry(policy, repo)
+    if entry:
+        branch = entry.get("defaultBranch")
+        if isinstance(branch, str) and branch.strip():
+            return branch.strip()
+
+    return fetch_repo_default_branch(repo)
+
+
 def sync_mirror(repo: str, mirror_dir: Path, default_branch: str) -> dict[str, Any]:
-    mirror_dir = mirror_dir.expanduser()
+    mirror_dir = runtime_paths.expand_path(mirror_dir)
     repo_url = f"https://github.com/{repo}.git"
     if not mirror_dir.exists():
         mirror_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -901,7 +945,7 @@ def sync_mirror(repo: str, mirror_dir: Path, default_branch: str) -> dict[str, A
 
 
 def checkout_pr_head(repo: str, mirror_dir: Path, pr_number: int) -> dict[str, Any]:
-    mirror_dir = mirror_dir.expanduser()
+    mirror_dir = runtime_paths.expand_path(mirror_dir)
     branch_name = f"automation/pr-{pr_number}"
     run_command(
         ["git", "fetch", "origin", f"pull/{pr_number}/head:{branch_name}"],
@@ -929,7 +973,7 @@ def post_comment_via_cli(repo: str, number: int, body: str, *, dry_run: bool) ->
 
 
 def command_scan(args: argparse.Namespace) -> None:
-    state = load_state(Path(args.state_file).expanduser())
+    state = load_state(runtime_paths.expand_path(args.state_file))
     maintainers = maintainer_set(args.maintainers.split(","))
     candidates = discover_candidates(
         args.repo,
@@ -971,7 +1015,7 @@ def command_post_comment(args: argparse.Namespace) -> None:
 
 
 def command_mark_processed(args: argparse.Namespace) -> None:
-    state_path = Path(args.state_file).expanduser()
+    state_path = runtime_paths.expand_path(args.state_file)
     state = load_state(state_path)
     candidate = parse_json_file(Path(args.candidate_file))
     decision = parse_json_file(Path(args.decision_file))
@@ -986,7 +1030,8 @@ def command_summarize(args: argparse.Namespace) -> None:
 
 
 def command_sync_mirror(args: argparse.Namespace) -> None:
-    print(json.dumps(sync_mirror(args.repo, Path(args.mirror_dir), args.default_branch), indent=2))
+    default_branch = resolve_default_branch(args.repo, args.default_branch, policy_file=Path(args.policy_file))
+    print(json.dumps(sync_mirror(args.repo, Path(args.mirror_dir), default_branch), indent=2))
 
 
 def command_checkout_pr_head(args: argparse.Namespace) -> None:
@@ -1000,7 +1045,8 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser = subparsers.add_parser("sync-mirror")
     sync_parser.add_argument("--repo", default=DEFAULT_REPO)
     sync_parser.add_argument("--mirror-dir", default=str(DEFAULT_MIRROR_DIR))
-    sync_parser.add_argument("--default-branch", default="master")
+    sync_parser.add_argument("--default-branch", default=None)
+    sync_parser.add_argument("--policy-file", default=str(DEFAULT_POLICY_FILE))
     sync_parser.set_defaults(func=command_sync_mirror)
 
     checkout_parser = subparsers.add_parser("checkout-pr-head")

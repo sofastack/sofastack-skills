@@ -15,10 +15,11 @@ Prioritize these repositories for the first rollout:
 Skip archived repositories.
 Ignore private repositories unless current credentials can access them and the current run explicitly opts in.
 
-## Repo-specific Maintainers
+## Repo-specific Maintainers and Default Branches
 
 Use these sets when evaluating `has_newer_maintainer_activity` and when deciding whether a thread is still waiting on maintainers.
-Always include `nobodyiam` as a maintainer.
+Treat this policy file as the source of truth for maintainer identity. Do not assume the current operator is a maintainer unless that login is explicitly listed for the repository.
+For mirror syncs, prefer the repo-specific `defaultBranch` from `repo-policy.json`; if a repository is missing there, fall back to runtime GitHub default-branch detection.
 
 ### sofastack/sofa-rpc
 - `nobodyiam`
@@ -104,6 +105,6 @@ Treat these as automation noise unless a human explicitly asks to review them:
 
 ## Output Policy
 
-- Use compact Chinese maintainer summaries for Jason.
+- Use compact Chinese maintainer summaries by default unless the current operator explicitly wants another language.
 - Keep the sections `Auto-sent`, `Needs review`, and `Skipped/Error`.
 - If a run finds no actionable new work, return exactly `HEARTBEAT_OK`.
